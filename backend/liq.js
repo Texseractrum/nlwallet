@@ -23,6 +23,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { avalanche } from 'viem/chains'
 import JSBI from 'jsbi'
 import { config } from 'dotenv';
+import { time } from 'framer-motion'
 
 config();  // so we can load PRIVATE_KEY etc. from .env
 
@@ -240,6 +241,8 @@ async function approveTokenIfNeeded(tokenAddress, spender, amount) {
         });
 
         const txHash = await walletClient.writeContract(request);
+
+        time.sleep(5000);
         console.log(`Approve TX: ${txHash}`);
 
         // Wait for the transaction to be mined before continuing.
