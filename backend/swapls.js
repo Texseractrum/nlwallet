@@ -106,6 +106,19 @@ async function approveTokenIfNeeded(
  */
 export async function swapAnyTokens(symbolIn, symbolOut, amountIn) {
     try {
+        // Add validation at the start
+        console.log("Starting swap with:", { symbolIn, symbolOut, amountIn }); // Debug log
+        
+        if (!symbolIn || !symbolOut || !amountIn) {
+            throw new Error("Missing required parameters");
+        }
+
+        // Validate token symbols
+        const validTokens = ['USDC', 'USDT', 'AAVE', 'AVAX'];
+        if (!validTokens.includes(symbolIn) || !validTokens.includes(symbolOut)) {
+            throw new Error(`Invalid token symbols. Must be one of: ${validTokens.join(', ')}`);
+        }
+
         // 1. Setup: load private key and create clients.
         const privateKey = process.env.PRIVATE_KEY;
         if (!privateKey) throw new Error("PRIVATE_KEY not set.");
