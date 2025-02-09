@@ -17,7 +17,7 @@ def process_with_gpt(chain_context, user_input):
     """Process user input with GPT-4 and return structured response"""
     
     system_prompt = f"""You are a {chain_context} blockchain expert.
-    You need to respond to user's input and interract with the user.
+    You need to respond to user's input and interact with the user.
     
     If the users asks for action input e.g. "transfer","send", "stake", "swap", "add liquidity", you need to analyze the user's input and extract the operation type, tokens, and amount involved.
     Always include an amount (use "0" if not specified in input).
@@ -30,9 +30,16 @@ def process_with_gpt(chain_context, user_input):
         "response":"response to the user's input"
     }}
     For non-swap operations, token2 can be null but amount must always be present. 
-    If the operation is "stake" then add a field "protocol". If protocol not found simply return Specify protocol.
+    If the operation is "stake" then add a field "protocol". 
+    
+    Valid protocols for BNB Chain: LISTA, CAKE, XVS
+    Valid tokens for BNB Chain: BNB, WBNB, BUSD, CAKE, XVS
+    Valid tokens for Avalanche: AVAX, USDC, USDT
+
     If the operation is "add_liquidity", both token1, token2, amount and amount2 must be present.
-    Possible operations: "transfer", "stake", "swap", "add_liquidity". If operation is "transfer" then token2 is null and you need to add a field "wallet"   """
+    Possible operations: "transfer", "stake", "swap", "add_liquidity". 
+    If operation is "transfer" then token2 is null and you need to add a field "wallet"
+    """
 
     try:
         response = client.chat.completions.create(
@@ -144,13 +151,9 @@ def confirm_avalanche_transaction():
 
 def confirm_transaction(chain):
     """Generic transaction confirmation logic"""
-    if not request.is_json:
-        print("Error: Request is not JSON")
-        return jsonify({"error": "Request must be JSON"}), 400
-
     try:
         data = request.get_json()
-        print(f"Parsed JSON data: {data}")  # Debug log
+        print(f"Parsed JSON data: {data}")
 
         if chain.lower() == 'avalanche':
             operation = data.get('operation')
@@ -204,6 +207,57 @@ def confirm_transaction(chain):
                 else:
                     print(f"Add liquidity failed with status {response.status_code}: {response.text}")
                     raise Exception(f"Add liquidity failed: {response.json().get('error')}")
+
+        elif chain.lower() == 'bnb':
+            operation = data.get('operation')
+            if operation == 'swap':
+                swap_request = {
+                    'symbolIn': data.get('token1'),
+                    'symbolOut': data.get('token2'),
+                    'amountIn': str(data.get('amount'))
+                }
+                print(f"Sending BNB swap request: {swap_request}")
+                
+                response = requests.post(
+                    'http://localhost:3006/swap',
+                    json=swap_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Swap executed on BNB Chain: {data.get('amount')} {data.get('token1')} to {data.get('token2')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"BNB swap failed: {response.text}")
+                    raise Exception(f"Swap failed: {response.json().get('error')}")
+                    
+            elif operation == 'stake':
+                stake_request = {
+                    'protocol': data.get('protocol'),
+                    'amount': str(data.get('amount'))
+                }
+                print(f"Sending BNB stake request: {stake_request}")
+                
+                response = requests.post(
+                    'http://localhost:3006/stake',
+                    json=stake_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Staked on BNB Chain: {data.get('amount')} {data.get('token1')} on {data.get('protocol')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"BNB staking failed: {response.text}")
+                    raise Exception(f"Staking failed: {response.json().get('error')}")
 
         response_message = f"Processing {data.get('operation')} on {chain.upper()}"
         if data.get('operation') == "transfer":

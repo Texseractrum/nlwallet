@@ -97,7 +97,7 @@ export function ChatBox({
                   </button>
                   <button 
                     data-action="confirm"
-                    data-operation="${parsedResponse.operation}"
+                    data-operation='${JSON.stringify(parsedResponse)}'
                     class="p-3 rounded-md bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -158,28 +158,52 @@ export function ChatBox({
 
   const handleConfirm = async (operation: string) => {
     try {
-      const response = await fetch(`http://localhost:5001/confirm`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ operation }),
-      });
+      const operationData = JSON.parse(operation);
+      console.log("Operation data received:", operationData);
+
+      const chainEndpoint = getEndpoint(agentId);
+      console.log("Using chain endpoint:", chainEndpoint);
+
+      const response = await fetch(
+        `http://localhost:5001${chainEndpoint}/confirm`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(operationData),
+        }
+      );
+
       const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "agent",
-          content: data.response || "Transaction confirmed",
-          isHtml: false,
-        },
-      ]);
+      console.log("Response from server:", data);
+
+      if (data.status === "success") {
+        let message = data.response;
+        if (data.txHash) {
+          message += `\nTransaction Hash: ${data.txHash}`;
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "agent",
+            content: message,
+            isHtml: false,
+          },
+        ]);
+      } else {
+        throw new Error(data.message || "Transaction failed");
+      }
     } catch (error) {
+      console.error("Error in handleConfirm:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Error confirming transaction";
       setMessages((prev) => [
         ...prev,
         {
           role: "agent",
-          content: "Error confirming transaction",
+          content: `Error: ${errorMessage}`,
           isHtml: false,
         },
       ]);
