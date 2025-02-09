@@ -86,3 +86,16 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-400 {
+  animation-delay: 400ms;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

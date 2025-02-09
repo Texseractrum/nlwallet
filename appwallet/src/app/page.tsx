@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 const prompts = [
   "How can I check my BNB balance?",
@@ -40,11 +41,20 @@ export default function Home() {
   }, [promptIndex, charIndex]);
 
   return (
-    <div className="flex items-center min-h-[calc(100vh-4rem)] p-6 pl-24">
+    <div className="flex flex-col items-center min-h-[calc(100vh-4rem)] p-6 pl-24">
       <div className="text-center space-y-6 max-w-2xl w-full px-4">
-        <h1 className="text-4xl font-bold mb-8">
-          Welcome to Poxui incorporated
-        </h1>
+        <div className="mb-8">
+          <Image
+            src="/200w.gif"
+            alt="Black spiral animation"
+            width={200}
+            height={200}
+            priority
+            className="mx-auto"
+          />
+        </div>
+
+        <h1 className="text-4xl font-bold mb-8">Welcome to Sunset</h1>
         <h2 className="text-2xl font-semibold mb-4">
           What can I help you with?
         </h2>
