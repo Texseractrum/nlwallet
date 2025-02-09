@@ -32,6 +32,7 @@ def process_with_gpt(chain_context, user_input):
         "token1": "symbol",
         "token2": "symbol",
         "amount": "amount"
+        "response":"response to the user's input"
     }}
     For non-swap operations, token2 can be null but amount must always be present. If the operation is "stake" then add a field "protocol". If protocol not found simply return Specify protocol.
     Possible operations: "transfer", "stake", "swap". If operation is "transfer" then token2 is null and you need to add a field "wallet"   """

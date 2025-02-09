@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -84,77 +84,49 @@ export function ChatBox({
       if (data.response) {
         try {
           const parsedResponse = JSON.parse(data.response);
-          // Define handlers before using them in the HTML
-          window.handleConfirm = async (operation: string) => {
-            try {
-              const response = await fetch("http://localhost:5001/confirm", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ operation: operation }),
-              });
-
-              const result = await response.json();
-              if (result.status === "success") {
-                console.log(`${operation.toUpperCase()} in progress...`);
-                onClose();
-              }
-            } catch (error) {
-              console.error("Error:", error);
-            }
-          };
-
-          window.handleReject = () => {
-            onClose();
-          };
-
-          formattedContent = `
-            <div class="bg-muted rounded-lg p-6 inline-block min-w-[300px] shadow-sm border-2 border-primary">
-              <div class="text-xl font-bold mb-4 pb-3 border-b border-primary/20">${parsedResponse.operation.toUpperCase()}</div>
-              <div class="space-y-3 mb-4">
-                <div class="text-base font-medium">Token 1: <span class="font-normal">${
-                  parsedResponse.token1
-                }</span></div>
-                ${
-                  parsedResponse.token2
-                    ? `<div class="text-base font-medium">Token 2: <span class="font-normal">${parsedResponse.token2}</span></div>`
-                    : ""
-                }
-                ${
-                  parsedResponse.amount
-                    ? `<div class="text-base font-medium">Amount: <span class="font-normal">${parsedResponse.amount}</span></div>`
-                    : ""
-                }
+          if (parsedResponse.operation) {
+            formattedContent = `
+              <div class="bg-muted rounded-lg p-4 inline-block min-w-[200px] shadow-sm border-2 border-primary">
+                <div class="text-sm">${parsedResponse.response}</div>
+                <div class="flex justify-end space-x-2 mt-2">
+                  <button 
+                    data-action="reject"
+                    class="p-3 rounded-md bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                  <button 
+                    data-action="confirm"
+                    data-operation="${parsedResponse.operation}"
+                    class="p-3 rounded-md bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                </div>
               </div>
-              <div class="flex justify-center space-x-6">
-                <button onclick="window.handleReject()" class="p-3 rounded-md bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-                <button onclick="window.handleConfirm('${
-                  parsedResponse.operation
-                }')" class="p-3 rounded-md bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </button>
-              </div>
-            </div>
-          `;
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "agent",
-              content: formattedContent,
-              isHtml: true,
-            },
-          ]);
+            `;
+            setMessages((prev) => [
+              ...prev,
+              { role: "agent", content: formattedContent, isHtml: true },
+            ]);
+          } else {
+            // Not a transaction, show just the content directly
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "agent",
+                content: data.response,
+                isHtml: false,
+              },
+            ]);
+          }
         } catch {
-          formattedContent = data.response;
+          // If parsing fails, show the response content directly
           setMessages((prev) => [
             ...prev,
             {
               role: "agent",
-              content: formattedContent,
+              content: data.response,
               isHtml: false,
             },
           ]);
@@ -184,15 +156,81 @@ export function ChatBox({
     }
   };
 
-  const handleConfirm = () => {
-    // Add confirmation logic here
-    console.log("Transaction confirmed");
+  const handleConfirm = async (operation: string) => {
+    try {
+      const response = await fetch(`http://localhost:5001/confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ operation }),
+      });
+      const data = await response.json();
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "agent",
+          content: data.response || "Transaction confirmed",
+          isHtml: false,
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "agent",
+          content: "Error confirming transaction",
+          isHtml: false,
+        },
+      ]);
+    }
   };
 
   const handleReject = () => {
-    // Add rejection logic here
-    console.log("Transaction rejected");
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "agent",
+        content: "Transaction cancelled",
+        isHtml: false,
+      },
+    ]);
   };
+
+  // Add this new function to handle button clicks
+  const handleButtonClick = (event: MouseEvent) => {
+    const button = (event.target as HTMLElement).closest("button");
+    if (!button) return;
+
+    const action = button.getAttribute("data-action");
+    const operation = button.getAttribute("data-operation");
+    const container = button.closest(".bg-muted");
+
+    if (container) {
+      (container as HTMLElement).style.pointerEvents = "none";
+      (container as HTMLElement).style.opacity = "0.5";
+    }
+
+    if (action === "confirm" && operation) {
+      handleConfirm(operation);
+    } else if (action === "reject") {
+      handleReject();
+    }
+  };
+
+  // Add event listener when component mounts
+  useEffect(() => {
+    document.addEventListener("click", handleButtonClick);
+    return () => {
+      document.removeEventListener("click", handleButtonClick);
+    };
+  }, []);
+
+  // Assign the handlers to the window object
+  if (typeof window !== "undefined") {
+    window.handleConfirm = handleConfirm;
+    window.handleReject = handleReject;
+  }
 
   return (
     <div className="flex flex-col h-full">
