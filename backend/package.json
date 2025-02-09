@@ -9,7 +9,6 @@
     },
     "private": true,
     "dependencies": {
-        "@aave/contract-helpers": "^1.31.1",
         "@traderjoe-xyz/sdk-core": "^2.0.7",
         "@traderjoe-xyz/sdk-v2": "^3.0.21",
         "cors": "^2.8.5",
