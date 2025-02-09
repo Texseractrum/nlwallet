@@ -32,8 +32,8 @@ const CHAIN_ID = ChainId.AVALANCHE;
 // This is the Trader Joe LB V22 router on Avalanche:
 const routerAddress = LB_ROUTER_V22_ADDRESS[CHAIN_ID];
 
-const privateKey = 'c3a3b1f4a06e40a1d427893cc600851ba7ca1ca000e1f48cfa89a2dd80328b90';
-const account = privateKeyToAccount(`0x${privateKey}`);
+const privateKey = process.env.PRIVATE_KEY;
+const account = privateKeyToAccount(privateKey);
 
 // Create Viem clients (public and wallet)
 const publicClient = createPublicClient({
@@ -59,9 +59,11 @@ const walletClient = createWalletClient({
  * @async
  * @function addLiquidityUSDCUSDT
  * @param {string} binStep - The bin step for the LB pair (e.g. "1", "5", "10", etc.).
- * @returns {Promise<void>}
+ * @param {string} usdcAmount - The amount of USDC to add.
+ * @param {string} usdtAmount - The amount of USDT to add.
+ * @returns {Promise<string>} - The transaction hash
  */
-export async function addLiquidityUSDCUSDT(binStep = "1") {
+export async function addLiquidityUSDCUSDT(binStep = "1", usdcAmount = "0.01", usdtAmount = "0.01") {
     try {
         // --- 1) Define tokens
         const USDC = new Token(
@@ -80,9 +82,9 @@ export async function addLiquidityUSDCUSDT(binStep = "1") {
             'TetherToken'
         );
 
-        // --- 2) User’s typed input for the token amounts (0.1 each)
-        const typedValueUSDC = "0.01";
-        const typedValueUSDT = "0.01";
+        // --- 2) User's typed input for the token amounts (0.1 each)
+        const typedValueUSDC = usdcAmount;
+        const typedValueUSDT = usdtAmount;
 
         // Parse each typed value with correct decimals
         const typedValueUSDCParsed = parseUnits(typedValueUSDC, USDC.decimals);
@@ -174,9 +176,14 @@ export async function addLiquidityUSDCUSDT(binStep = "1") {
         const txHash = await walletClient.writeContract(request);
         console.log(`Transaction sent! Hash: ${txHash}`);
 
-        // Done
+        // Wait for confirmation
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
+        console.log("Add liquidity confirmed in block");
+
+        return txHash;  // Return the transaction hash
     } catch (err) {
         console.error("Error while adding liquidity:", err);
+        throw err;  // Re-throw the error to be handled by the caller
     }
 }
 
