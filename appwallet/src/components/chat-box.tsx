@@ -234,7 +234,9 @@ export function ChatBox({
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  {message.content}
+                  {message.content.startsWith('{ "response":')
+                    ? JSON.parse(message.content).response
+                    : message.content}
                 </span>
               )}
             </motion.div>

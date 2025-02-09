@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { AgentBox } from "@/components/agent-box";
 import { ChatBox } from "@/components/chat-box";
 
@@ -11,7 +12,19 @@ const agents = [
 ];
 
 export default function AgentsPage() {
+  const searchParams = useSearchParams();
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
+
+  useEffect(() => {
+    const agentId = searchParams.get("agentId");
+    if (agentId) {
+      setSelectedAgent(parseInt(agentId, 10));
+    }
+  }, [searchParams]);
+
+  const handleAgentClick = (agentId: number) => {
+    setSelectedAgent(agentId);
+  };
 
   return (
     <div className="space-y-6 p-6 pl-24">
@@ -21,17 +34,15 @@ export default function AgentsPage() {
           <AgentBox
             key={agent.id}
             agent={agent}
-            onClick={() => setSelectedAgent(agent.id)}
+            onClick={() => handleAgentClick(agent.id)}
           />
         ))}
       </div>
       {selectedAgent && (
-        <div className="fixed inset-y-0 right-0 z-50 w-[calc(100%-16rem)] bg-background">
-          <ChatBox
-            agentId={selectedAgent.toString()}
-            onClose={() => setSelectedAgent(null)}
-          />
-        </div>
+        <ChatBox
+          agentId={selectedAgent.toString()}
+          onClose={() => setSelectedAgent(null)}
+        />
       )}
     </div>
   );

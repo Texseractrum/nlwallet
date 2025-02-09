@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const prompts = [
   "How can I check my BNB balance?",
@@ -18,9 +19,11 @@ const prompts = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [promptIndex, setPromptIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
+  const [userInput, setUserInput] = useState("");
 
   useEffect(() => {
     const typingInterval = setInterval(() => {
@@ -40,8 +43,38 @@ export default function Home() {
     return () => clearInterval(typingInterval);
   }, [promptIndex, charIndex]);
 
+  const handleInputSubmit = async (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter" && userInput.trim()) {
+      try {
+        const response = await fetch("http://localhost:5001/select-chain", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ input: userInput }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+
+        const { agentId } = await response.json();
+
+        // Redirect to agents page with the selected agent ID
+        router.push(`/agents?agentId=${agentId}`);
+
+        // Clear input after sending
+        setUserInput("");
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center min-h-[calc(100vh-4rem)] p-6 pl-24">
+    <div className="flex min-h-screen items-center justify-center sm:-mt-8 md:-mt-16 lg:-mt-20 sm:pl-24 md:pl-40 lg:pl-64">
       <div className="text-center space-y-6 max-w-2xl w-full px-4">
         <div className="mb-8">
           <Image
@@ -58,7 +91,13 @@ export default function Home() {
         <h2 className="text-2xl font-semibold mb-4">
           What can I help you with?
         </h2>
-        <Input placeholder={currentPrompt} className="text-lg w-full" />
+        <Input
+          placeholder={currentPrompt}
+          className="text-lg w-full"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          onKeyPress={handleInputSubmit}
+        />
         <p className="text-sm text-muted-foreground">
           Type your question about BNB Chain or Avalanche blockchain
         </p>

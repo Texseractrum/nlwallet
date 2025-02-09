@@ -1,9 +1,19 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useTheme } from "next-themes"
-import { Home, Users, LayoutDashboard, MessageSquare, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { useTheme } from "next-themes";
+import {
+  Home,
+  Users,
+  LayoutDashboard,
+  MessageSquare,
+  Sun,
+  Moon,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,26 +24,32 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const chatHistory = [
   { id: 1, title: "BNB Balance Inquiry", date: "2023-05-10" },
   { id: 2, title: "Avalanche Gas Prices", date: "2023-05-11" },
   { id: 3, title: "PancakeSwap Token Swap", date: "2023-05-12" },
-]
+];
 
 export function AppSidebar() {
-  const { theme, setTheme } = useTheme()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { theme, setTheme } = useTheme();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <div className="relative">
-      <Sidebar className={`${isCollapsed ? "w-16" : "w-64"} flex-shrink-0 transition-all duration-300 ease-in-out`}>
+      <Sidebar
+        className={`${
+          isCollapsed ? "w-16" : "w-64"
+        } flex-shrink-0 transition-all duration-300 ease-in-out`}
+      >
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+              Navigation
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -92,7 +108,9 @@ export function AppSidebar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                    onClick={() =>
+                      setTheme(theme === "light" ? "dark" : "light")
+                    }
                     className="w-full justify-start"
                   >
                     {theme === "light" ? (
@@ -111,6 +129,24 @@ export function AppSidebar() {
               </SidebarGroup>
             </>
           )}
+
+          <div className="mt-auto">
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href="/settings">
+                        <Settings className="h-4 w-4" />
+                        {!isCollapsed && <span className="ml-2">Settings</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </div>
         </SidebarContent>
       </Sidebar>
       <Button
@@ -119,9 +155,12 @@ export function AppSidebar() {
         className="absolute -right-4 top-4 z-10"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
       </Button>
     </div>
-  )
+  );
 }
-
