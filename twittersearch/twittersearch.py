@@ -15,19 +15,19 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 url = "https://apis.datura.ai/twitter"
 
 payload = {
-    "query": "from:ardizor since:2025-02-01 until:2025-02-08",
-    "sort": "Top",
-    "start_date": "2025-02-01",
+    "query": "from:cz_binance since:2025-02-07 until:2025-02-08",
+    "sort": "Latest",
+    "start_date": "2025-02-07",
     "end_date": "2025-02-08",
     "lang": "en",
     "verified": True,
     "blue_verified": False,
-    "is_quote": False,
+    "is_quote": True,
     "is_video": False,
     "is_image": False,
     "min_retweets": 1,
     "min_replies": 1,
-    "min_likes": 100
+    "min_likes": 10
 }
 headers = {
     "Authorization": "dt_$43jT5EUlAiSlu2mX2aehFioRonpIjvCmwnVbSQjL_E8",
@@ -66,7 +66,7 @@ else:
     chatgpt_messages = [
         {
             'role': 'system',
-            'content': 'You are analyzing tweets from the specified user. Please provide insights and analysis.'
+            'content': 'Answer if the tweet data include subscriber responses'
         },
         {
             'role': 'user',
