@@ -4,38 +4,42 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 import json
+import requests
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+CORS(app, resources={r"/*": {"origins": "*"}})
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def process_with_gpt(chain_context, user_input):
     """Process user input with GPT-4 and return structured response"""
     
     system_prompt = f"""You are a {chain_context} blockchain expert.
-    You need to respond to user's input and interract with the user.
+    You need to respond to user's input and interact with the user.
     
-
-    If the users asks for action input e.g. "transfer","send", "stake", "swap", you need to analyze the user's input and extract the operation type, tokens, and amount involved.
+    If the users asks for action input e.g. "transfer","send", "stake", "swap", "add liquidity", you need to analyze the user's input and extract the operation type, tokens, and amount involved.
     Always include an amount (use "0" if not specified in input).
     Output only a JSON with this format (capitalize token symbols): {{
         "operation": "type",
         "token1": "symbol",
         "token2": "symbol",
-        "amount": "amount"
+        "amount": "amount",
+        "amount2": "amount",  # Add this for add_liquidity operations
         "response":"response to the user's input"
     }}
-    For non-swap operations, token2 can be null but amount must always be present. If the operation is "stake" then add a field "protocol". If protocol not found simply return Specify protocol.
-    Possible operations: "transfer", "stake", "swap". If operation is "transfer" then token2 is null and you need to add a field "wallet"   """
+    For non-swap operations, token2 can be null but amount must always be present. 
+    If the operation is "stake" then add a field "protocol". 
+    
+    Valid protocols for BNB Chain: LISTA, CAKE, XVS
+    Valid tokens for BNB Chain: BNB, WBNB, BUSD, CAKE, XVS
+    Valid tokens for Avalanche: AVAX, USDC, USDT
+
+    If the operation is "add_liquidity", both token1, token2, amount and amount2 must be present.
+    Possible operations: "transfer", "stake", "swap", "add_liquidity". 
+    If operation is "transfer" then token2 is null and you need to add a field "wallet"
+    """
 
     try:
         response = client.chat.completions.create(
@@ -133,34 +137,141 @@ def select_chain():
             "error": "Error processing chain selection"
         }), 500
 
-@app.route('/confirm', methods=['POST'])
-def confirm_transaction():
-    """Handle transaction confirmation"""
-    print("\n=== Confirm Transaction Endpoint ===")
-    print(f"Request received: {request}")
-    print(f"Request headers: {request.headers}")
-    print(f"Request data: {request.get_data(as_text=True)}")  # Print raw request data
-    
-    if not request.is_json:
-        print("Error: Request is not JSON")
-        return jsonify({"error": "Request must be JSON"}), 400
-        
+@app.route('/bnb/confirm', methods=['POST'])
+def confirm_bnb_transaction():
+    """Handle transaction confirmation for BNB chain"""
+    print("\n=== Confirm BNB Transaction Endpoint ===")
+    return confirm_transaction("BNB")
+
+@app.route('/avalanche/confirm', methods=['POST'])
+def confirm_avalanche_transaction():
+    """Handle transaction confirmation for Avalanche chain"""
+    print("\n=== Confirm Avalanche Transaction Endpoint ===")
+    return confirm_transaction("Avalanche")
+
+def confirm_transaction(chain):
+    """Generic transaction confirmation logic"""
     try:
         data = request.get_json()
         print(f"Parsed JSON data: {data}")
-        operation = data.get('operation', 'Unknown')
-        transaction = data.get('transaction', {})
-        print(f"Operation: {operation}")
-        print(f"Transaction: {transaction}")
-        
-        response = {
+
+        if chain.lower() == 'avalanche':
+            operation = data.get('operation')
+            if operation == 'swap':
+                # Ensure we're sending the correct data format
+                swap_request = {
+                    'symbolIn': data.get('token1'),
+                    'symbolOut': data.get('token2'),
+                    'amountIn': str(data.get('amount'))  # Convert to string if it's not already
+                }
+                print(f"Sending swap request: {swap_request}")  # Debug log
+                
+                response = requests.post(
+                    'http://localhost:3005/swap',
+                    json=swap_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Swap executed: {data.get('amount')} {data.get('token1')} to {data.get('token2')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"Swap failed with status {response.status_code}: {response.text}")  # Debug log
+                    raise Exception(f"Swap failed: {response.json().get('error')}")
+            elif operation == 'add_liquidity':
+                # Ensure we're sending the correct data format
+                add_liquidity_request = {
+                    'token1Amount': str(data.get('amount')),
+                    'token2Amount': str(data.get('amount2')),
+                    'binStep': "1"  # Default binStep
+                }
+                print(f"Sending add liquidity request: {add_liquidity_request}")  # Debug log
+                
+                response = requests.post(
+                    'http://localhost:3005/add-liquidity',
+                    json=add_liquidity_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Added liquidity: {data.get('amount')} {data.get('token1')} and {data.get('amount2')} {data.get('token2')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"Add liquidity failed with status {response.status_code}: {response.text}")
+                    raise Exception(f"Add liquidity failed: {response.json().get('error')}")
+
+        elif chain.lower() == 'bnb':
+            operation = data.get('operation')
+            if operation == 'swap':
+                swap_request = {
+                    'symbolIn': data.get('token1'),
+                    'symbolOut': data.get('token2'),
+                    'amountIn': str(data.get('amount'))
+                }
+                print(f"Sending BNB swap request: {swap_request}")
+                
+                response = requests.post(
+                    'http://localhost:3006/swap',
+                    json=swap_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Swap executed on BNB Chain: {data.get('amount')} {data.get('token1')} to {data.get('token2')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"BNB swap failed: {response.text}")
+                    raise Exception(f"Swap failed: {response.json().get('error')}")
+                    
+            elif operation == 'stake':
+                stake_request = {
+                    'protocol': data.get('protocol'),
+                    'amount': str(data.get('amount'))
+                }
+                print(f"Sending BNB stake request: {stake_request}")
+                
+                response = requests.post(
+                    'http://localhost:3006/stake',
+                    json=stake_request,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.ok:
+                    response_data = response.json()
+                    return jsonify({
+                        "status": "success",
+                        "response": f"Staked on BNB Chain: {data.get('amount')} {data.get('token1')} on {data.get('protocol')}",
+                        "txHash": response_data.get('txHash')
+                    })
+                else:
+                    print(f"BNB staking failed: {response.text}")
+                    raise Exception(f"Staking failed: {response.json().get('error')}")
+
+        response_message = f"Processing {data.get('operation')} on {chain.upper()}"
+        if data.get('operation') == "transfer":
+            response_message = f"Transferring {data.get('amount')} {data.get('token1')}"
+        elif data.get('operation') == "swap":
+            response_message = f"Swapping {data.get('amount')} {data.get('token1')} to {data.get('token2')}"
+        elif data.get('operation') == "stake":
+            response_message = f"Staking {data.get('amount')} {data.get('token1')} on {data.get('protocol')}"
+
+        return jsonify({
             "status": "success",
-            "message": f"{operation.upper()} is in process..."
-        }
-        print(f"Sending response: {response}")
-        
-        return jsonify(response)
-        
+            "response": response_message
+        })
+
     except Exception as e:
         error_msg = f"Error processing request: {str(e)}"
         print(error_msg)
